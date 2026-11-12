@@ -9,17 +9,19 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const ACCEPT = "image/jpeg,image/png,image/webp";
 
 /**
- * Photo picker for a location: upload a file (stored by the API) or paste an
+ * Photo picker (location photo, trail cover): upload a file (stored by the API) or paste an
  * image URL. [value] is what gets saved as image_url.
  */
 export function ImageField({
   value,
   onChange,
   upload,
+  label = "Foto",
 }: {
   value: string;
   onChange: (url: string) => void;
   upload: (file: File) => Promise<string>;
+  label?: string;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -52,7 +54,7 @@ export function ImageField({
 
   return (
     <div className="space-y-2">
-      <span className="text-sm font-medium text-gray-700 block">Foto</span>
+      <span className="text-sm font-medium text-gray-700 block">{label}</span>
       <div
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {

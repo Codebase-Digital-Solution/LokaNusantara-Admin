@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Pencil, Plus, X } from "lucide-react";
 import { locationDatasource, trailDatasource } from "@/data/datasources";
+import { ImageField } from "@/components/admin/ImageField";
+import { imageSrc } from "@/core/utils/imageUrl";
 import type { Trail, TrailInput } from "@/domain/entities";
 import {
   Button,
@@ -21,7 +23,7 @@ import {
   usePagination,
 } from "@/components/admin/ui";
 
-const EMPTY: TrailInput = { slug: "", title: "", subtitle: "", story: "", color: "#A87618", stops: [] };
+const EMPTY: TrailInput = { slug: "", title: "", subtitle: "", story: "", color: "#A87618", image_url: "", stops: [] };
 
 function slugify(s: string) {
   return s
@@ -74,6 +76,7 @@ export default function TrailsPage() {
             subtitle: t.subtitle ?? "",
             story: t.story ?? "",
             color: t.color || "#A87618",
+            image_url: t.image_url ?? "",
             stops: t.stops.map((s) => ({ location_id: s.location_id, note: s.note ?? "" })),
           },
     );
@@ -128,7 +131,9 @@ export default function TrailsPage() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {pager.pageItems.map((t) => (
-              <div key={t.id} className="flex flex-col rounded-xl border border-gray-200 bg-white p-5">
+              <div key={t.id} className="flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <TrailCover url={t.image_url} color={t.color} />
+                <div className="flex flex-1 flex-col p-5">
                 <div className="flex items-start gap-3">
                   <span className="mt-1 h-3 w-3 shrink-0 rounded-full" style={{ background: t.color || "#999" }} />
                   <div className="min-w-0 flex-1">
@@ -150,6 +155,7 @@ export default function TrailsPage() {
                     <Pencil size={12} /> Ubah
                   </Button>
                   <DeleteButton onConfirm={() => remove(t.id)} />
+                </div>
                 </div>
               </div>
             ))}
@@ -205,6 +211,12 @@ export default function TrailsPage() {
               </div>
             </Field>
           </div>
+          <ImageField
+            label="Foto sampul"
+            value={form.image_url}
+            onChange={(url) => set({ image_url: url })}
+            upload={trailDatasource.uploadImage}
+          />
           <Field label="Kisah">
             <TextArea rows={5} value={form.story} onChange={(e) => set({ story: e.target.value })} />
           </Field>
@@ -272,5 +284,21 @@ export default function TrailsPage() {
         </form>
       </Modal>
     </>
+  );
+}
+
+/** Cover photo of a trail card, or its theme colour while there is none. */
+function TrailCover({ url, color }: { url: string; color: string }) {
+  const [broken, setBroken] = useState(false);
+  const src = imageSrc(url);
+  return (
+    <div className="aspect-[16/7] w-full" style={{ background: color || "#A87618" }}>
+      {src && !broken ? (
+        // eslint-disable-next-line @next/next/no-img-element -- uploaded or external photo
+        <img src={src} alt="" loading="lazy" onError={() => setBroken(true)} className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full items-center justify-center text-xs font-medium text-white/80">Belum ada foto sampul</div>
+      )}
+    </div>
   );
 }

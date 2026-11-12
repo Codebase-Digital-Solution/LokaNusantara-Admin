@@ -93,6 +93,8 @@ export interface Trail {
   subtitle: string;
   story: string;
   color: string;
+  /** Cover photo: "/uploads/..." (relative to the API) or a full URL. */
+  image_url: string;
   stops: TrailStop[];
 }
 
@@ -102,6 +104,7 @@ export interface TrailInput {
   subtitle: string;
   story: string;
   color: string;
+  image_url: string;
   stops: { location_id: string; note: string }[];
 }
 

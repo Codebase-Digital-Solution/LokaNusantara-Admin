@@ -16,6 +16,16 @@ import type {
   TrailInput,
 } from "@/domain/entities";
 
+async function uploadImage(path: string, file: File): Promise<string> {
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await apiClient.post<{ url: string }>(path, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+    timeout: 60_000,
+  });
+  return data.url;
+}
+
 // Admin lists load everything at once; the dataset is small (hundreds of rows).
 const ALL = 1000;
 
@@ -55,15 +65,7 @@ export const locationDatasource = {
     await apiClient.delete(`/locations/${id}`);
   },
   /** Uploads a photo and returns its stored path ("/uploads/..."). */
-  uploadImage: async (file: File): Promise<string> => {
-    const form = new FormData();
-    form.append("file", file);
-    const { data } = await apiClient.post<{ url: string }>("/admin/uploads/location-image", form, {
-      headers: { "Content-Type": "multipart/form-data" },
-      timeout: 60_000,
-    });
-    return data.url;
-  },
+  uploadImage: (file: File): Promise<string> => uploadImage("/admin/uploads/location-image", file),
 };
 
 export const categoryDatasource = {
@@ -95,6 +97,8 @@ export const eventDatasource = {
 };
 
 export const trailDatasource = {
+  /** Uploads a cover photo and returns its stored path ("/uploads/..."). */
+  uploadImage: (file: File): Promise<string> => uploadImage("/admin/uploads/trail-image", file),
   getAll: async (): Promise<Trail[]> => (await apiClient.get<ListResponse<Trail>>("/trails")).data.data,
   create: async (input: TrailInput): Promise<Trail> => (await apiClient.post<Trail>("/trails", input)).data,
   update: async (id: number, input: TrailInput): Promise<Trail> =>
