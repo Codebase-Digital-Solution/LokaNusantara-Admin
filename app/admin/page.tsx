@@ -2,25 +2,63 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, MapPin, MessageSquare, Route, Tags, Users } from "lucide-react";
+import {
+  CalendarDays,
+  MapPin,
+  MessageSquare,
+  Route,
+  Tags,
+  Users,
+} from "lucide-react";
 import { statsDatasource } from "@/data/datasources";
-import { ErrorBanner, LoadingState, PageHeader, errorMessage } from "@/components/admin/ui";
+import {
+  ErrorBanner,
+  LoadingState,
+  PageHeader,
+  errorMessage,
+} from "@/components/admin/ui";
 
 const CARDS = [
   { key: "locations", label: "Lokasi", href: "/admin/locations", icon: MapPin },
-  { key: "categories", label: "Kategori", href: "/admin/categories", icon: Tags },
-  { key: "events", label: "Agenda Budaya", href: "/admin/events", icon: CalendarDays },
+  {
+    key: "categories",
+    label: "Kategori",
+    href: "/admin/categories",
+    icon: Tags,
+  },
+  {
+    key: "events",
+    label: "Agenda Budaya",
+    href: "/admin/events",
+    icon: CalendarDays,
+  },
   { key: "trails", label: "Jalur Kisah", href: "/admin/trails", icon: Route },
-  { key: "reviews", label: "Ulasan", href: "/admin/reviews", icon: MessageSquare },
-  { key: "users", label: "Pengguna aplikasi", href: "/admin/users", icon: Users },
+  {
+    key: "reviews",
+    label: "Ulasan",
+    href: "/admin/reviews",
+    icon: MessageSquare,
+  },
+  {
+    key: "users",
+    label: "Pengguna aplikasi",
+    href: "/admin/users",
+    icon: Users,
+  },
 ] as const;
 
 export default function DashboardPage() {
-  const { data, isLoading, error } = useQuery({ queryKey: ["stats"], queryFn: statsDatasource.get });
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["stats"],
+    queryFn: statsDatasource.get,
+  });
 
   return (
     <>
-      <PageHeader title="Dasbor" description="Ringkasan data yang tampil di aplikasi BaliGuide." />
+      <PageHeader
+        title="Dasbor"
+        description="Ringkasan data yang tampil di aplikasi LokaNusantara."
+      />
       {error && <ErrorBanner message={errorMessage(error)} />}
       {isLoading ? (
         <LoadingState />
@@ -34,10 +72,13 @@ export default function DashboardPage() {
                     <Icon size={16} />
                     {label}
                   </div>
-                  <p className="mt-2 text-3xl font-semibold tabular-nums text-gray-900">{data[key]}</p>
+                  <p className="mt-2 text-3xl font-semibold tabular-nums text-gray-900">
+                    {data[key]}
+                  </p>
                   {key === "users" && (
                     <p className="mt-1 text-xs text-gray-500 tabular-nums">
-                      +{data.new_users_7d} dalam 7 hari, +{data.new_users_30d} dalam 30 hari
+                      +{data.new_users_7d} dalam 7 hari, +{data.new_users_30d}{" "}
+                      dalam 30 hari
                     </p>
                   )}
                 </div>

@@ -1,5 +1,7 @@
 import { apiClient } from "@/core/api/apiClient";
 import type {
+  AISettings,
+  AISettingsUpdate,
   AuthResponse,
   UserListResponse,
   Category,
@@ -32,6 +34,15 @@ export const userDatasource = {
   getAll: async (): Promise<UserListResponse> => (await apiClient.get<UserListResponse>("/admin/users")).data,
 };
 
+export const aiSettingsDatasource = {
+  get: async (): Promise<AISettings> => (await apiClient.get<AISettings>("/admin/settings/ai")).data,
+  update: async (input: AISettingsUpdate): Promise<AISettings> =>
+    (await apiClient.put<AISettings>("/admin/settings/ai", input)).data,
+  test: async (): Promise<void> => {
+    await apiClient.post("/admin/settings/ai/test");
+  },
+};
+
 export const locationDatasource = {
   getAll: async (): Promise<Location[]> =>
     (await apiClient.get<ListResponse<Location>>("/locations", { params: { limit: ALL } })).data.data,
@@ -42,6 +53,16 @@ export const locationDatasource = {
     (await apiClient.put<Location>(`/locations/${id}`, input)).data,
   remove: async (id: string): Promise<void> => {
     await apiClient.delete(`/locations/${id}`);
+  },
+  /** Uploads a photo and returns its stored path ("/uploads/..."). */
+  uploadImage: async (file: File): Promise<string> => {
+    const form = new FormData();
+    form.append("file", file);
+    const { data } = await apiClient.post<{ url: string }>("/admin/uploads/location-image", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: 60_000,
+    });
+    return data.url;
   },
 };
 
@@ -54,6 +75,10 @@ export const categoryDatasource = {
     (await apiClient.put<Category>(`/categories/${id}`, { name })).data,
   remove: async (id: number): Promise<void> => {
     await apiClient.delete(`/categories/${id}`);
+  },
+  /** Saves the display order; ids must list every category once. */
+  reorder: async (ids: number[]): Promise<void> => {
+    await apiClient.put("/categories/order", { ids });
   },
 };
 

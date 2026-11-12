@@ -6,8 +6,8 @@ import Providers from "./_components/Providers";
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 
 export const metadata: Metadata = {
-  title: "BaliGuide Admin",
-  description: "Panel admin untuk mengelola data BaliGuide",
+  title: "LokaNusantara Admin",
+  description: "Panel admin untuk mengelola data LokaNusantara",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

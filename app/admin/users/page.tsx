@@ -134,12 +134,34 @@ export default function UsersPage() {
               </Select>
             </div>
 
-            <Table head={["Nama", "Email", "Peran", "Ulasan", "Terdaftar"]}>
-              {filtered.length === 0 && <EmptyRow colSpan={5} text="Belum ada pengguna yang registrasi." />}
+            <Table head={["Pengguna", "Masuk lewat", "Peran", "Ulasan", "Tersimpan", "Terdaftar"]}>
+              {filtered.length === 0 && <EmptyRow colSpan={6} text="Belum ada pengguna yang registrasi." />}
               {pager.pageItems.map((u) => (
                 <tr key={u.id}>
-                  <td className="px-4 py-3 font-medium text-gray-900">{u.name}</td>
-                  <td className="px-4 py-3 text-gray-500">{u.email}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      {u.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- remote Google avatar
+                        <img
+                          src={u.avatar_url}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                          className="h-9 w-9 shrink-0 rounded-full bg-gray-100 object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-sm font-semibold text-emerald-800">
+                          {u.name.trim().charAt(0).toUpperCase() || "?"}
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-gray-900">{u.name}</p>
+                        <p className="truncate text-xs text-gray-500">{u.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-gray-600">
+                    {u.login_method === "google" ? "Google" : "Email"}
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs ${
@@ -150,6 +172,7 @@ export default function UsersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-600 tabular-nums">{u.review_count}</td>
+                  <td className="px-4 py-3 text-gray-600 tabular-nums">{u.bookmark_count}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-gray-500 tabular-nums">
                     {new Date(u.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
                   </td>

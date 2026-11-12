@@ -12,6 +12,7 @@ import {
   Menu,
   MessageSquare,
   Route,
+  Sparkles,
   Tags,
   Users,
   X,
@@ -44,6 +45,12 @@ const NAV_GROUPS = [
       { href: "/admin/reviews", label: "Ulasan", icon: MessageSquare },
     ],
   },
+  {
+    title: "Sistem",
+    items: [
+      { href: "/admin/settings", label: "Pengaturan AI", icon: Sparkles },
+    ],
+  },
 ];
 
 // Waits for the persisted session to load, then sends anyone who is not an
@@ -56,7 +63,11 @@ function useHydrated() {
   );
 }
 
-export default function AdminShell({ children }: { children: React.ReactNode }) {
+export default function AdminShell({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const hydrated = useHydrated();
@@ -83,10 +94,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       {NAV_GROUPS.map((group, gi) => (
         <div key={gi} className="flex flex-col gap-1">
           {group.title && (
-            <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">{group.title}</p>
+            <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+              {group.title}
+            </p>
           )}
           {group.items.map(({ href, label, icon: Icon }) => {
-            const active = href === "/admin" ? pathname === href : pathname.startsWith(href);
+            const active =
+              href === "/admin" ? pathname === href : pathname.startsWith(href);
             return (
               <Link
                 key={href}
@@ -94,7 +108,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                 onClick={() => setMenuOpen(false)}
                 aria-current={active ? "page" : undefined}
                 className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  active ? "bg-emerald-50 text-emerald-800" : "text-gray-600 hover:bg-gray-100"
+                  active
+                    ? "bg-emerald-50 text-emerald-800"
+                    : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
                 <Icon size={16} />
@@ -116,16 +132,22 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       >
         <div className="mb-6 flex items-center justify-between px-1">
           <div>
-            <p className="font-semibold text-gray-900">BaliGuide</p>
+            <p className="font-semibold text-gray-900">LokaNusantara</p>
             <p className="text-xs text-gray-500">Panel Admin</p>
           </div>
-          <button className="lg:hidden text-gray-400" onClick={() => setMenuOpen(false)} aria-label="Tutup menu">
+          <button
+            className="lg:hidden text-gray-400"
+            onClick={() => setMenuOpen(false)}
+            aria-label="Tutup menu"
+          >
             <X size={18} />
           </button>
         </div>
         {nav}
         <div className="mt-auto border-t border-gray-100 pt-4">
-          <p className="truncate px-1 text-sm font-medium text-gray-800">{user.name}</p>
+          <p className="truncate px-1 text-sm font-medium text-gray-800">
+            {user.name}
+          </p>
           <p className="truncate px-1 text-xs text-gray-500">{user.email}</p>
           <button
             onClick={() => {
@@ -140,14 +162,23 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </div>
       </aside>
 
-      {menuOpen && <div className="fixed inset-0 z-[850] bg-black/30 lg:hidden" onClick={() => setMenuOpen(false)} />}
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-[850] bg-black/30 lg:hidden"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3 lg:hidden">
-          <button onClick={() => setMenuOpen(true)} className="text-gray-600" aria-label="Buka menu">
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="text-gray-600"
+            aria-label="Buka menu"
+          >
             <Menu size={20} />
           </button>
-          <span className="font-semibold text-gray-900">BaliGuide Admin</span>
+          <span className="font-semibold text-gray-900">LokaNusantara Admin</span>
         </header>
         <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>

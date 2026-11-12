@@ -3,6 +3,8 @@ export type Role = "user" | "admin";
 export interface Category {
   id: number;
   name: string;
+  /** Display order in the app, lowest first. */
+  position: number;
 }
 
 export interface Location {
@@ -10,6 +12,8 @@ export interface Location {
   name: string;
   description: string;
   history: string;
+  /** "/uploads/..." (relative to the API) or a full URL; empty when none. */
+  image_url: string;
   latitude: number;
   longitude: number;
   address: string;
@@ -23,6 +27,7 @@ export interface LocationInput {
   name: string;
   description: string;
   history: string;
+  image_url: string;
   address: string;
   latitude: number;
   longitude: number;
@@ -116,8 +121,30 @@ export interface AdminUser {
   name: string;
   email: string;
   role: Role;
+  avatar_url: string;
+  login_method: "google" | "email";
   review_count: number;
+  bookmark_count: number;
   created_at: string;
+}
+
+export interface AISettings {
+  api_key_set: boolean;
+  api_key_hint: string;
+  api_key_source: "database" | "env" | "";
+  model: string;
+  max_input_chars: number;
+  max_output_tokens: number;
+  updated_at?: string;
+}
+
+export interface AISettingsUpdate {
+  /** Omit to keep the current key. */
+  api_key?: string;
+  clear_api_key?: boolean;
+  model: string;
+  max_input_chars: number;
+  max_output_tokens: number;
 }
 
 export interface UserListResponse {

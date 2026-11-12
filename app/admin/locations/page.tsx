@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Search } from "lucide-react";
 import { categoryDatasource, locationDatasource } from "@/data/datasources";
 import type { Location, LocationInput } from "@/domain/entities";
+import { ImageField, ImageThumb } from "@/components/admin/ImageField";
 import {
   Button,
   DeleteButton,
@@ -33,6 +34,7 @@ type FormState = {
   name: string;
   description: string;
   history: string;
+  image_url: string;
   address: string;
   latitude: string;
   longitude: string;
@@ -43,6 +45,7 @@ const EMPTY: FormState = {
   name: "",
   description: "",
   history: "",
+  image_url: "",
   address: "",
   latitude: "",
   longitude: "",
@@ -56,6 +59,7 @@ export default function LocationsPage() {
 
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [onlyMissingPhoto, setOnlyMissingPhoto] = useState(false);
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -66,10 +70,12 @@ export default function LocationsPage() {
     return (locations.data ?? []).filter(
       (l) =>
         (!categoryFilter || String(l.category_id) === categoryFilter) &&
+        (!onlyMissingPhoto || !l.image_url) &&
         (!q || l.name.toLowerCase().includes(q) || l.address?.toLowerCase().includes(q)),
     );
-  }, [locations.data, query, categoryFilter]);
-  const pager = usePagination(filtered, `${query}|${categoryFilter}`);
+  }, [locations.data, query, categoryFilter, onlyMissingPhoto]);
+  const pager = usePagination(filtered, `${query}|${categoryFilter}|${onlyMissingPhoto}`);
+  const missingPhotos = (locations.data ?? []).filter((l) => !l.image_url).length;
 
   const set = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
 
@@ -79,6 +85,7 @@ export default function LocationsPage() {
         name: form.name.trim(),
         description: form.description,
         history: form.history,
+        image_url: form.image_url,
         address: form.address,
         latitude: Number(form.latitude),
         longitude: Number(form.longitude),
@@ -109,6 +116,7 @@ export default function LocationsPage() {
         name: full.name,
         description: full.description ?? "",
         history: full.history ?? "",
+        image_url: full.image_url ?? "",
         address: full.address ?? "",
         latitude: String(full.latitude),
         longitude: String(full.longitude),
@@ -158,6 +166,15 @@ export default function LocationsPage() {
               </option>
             ))}
           </Select>
+          <label className="flex shrink-0 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={onlyMissingPhoto}
+              onChange={(e) => setOnlyMissingPhoto(e.target.checked)}
+              className="h-4 w-4 accent-emerald-700"
+            />
+            Belum ada foto ({missingPhotos})
+          </label>
         </div>
 
         {locations.error && <ErrorBanner message={errorMessage(locations.error)} />}
@@ -166,10 +183,13 @@ export default function LocationsPage() {
         {locations.isLoading ? (
           <LoadingState />
         ) : (
-          <Table head={["Nama", "Kategori", "Alamat", "Koordinat", ""]}>
-            {filtered.length === 0 && <EmptyRow colSpan={5} text="Tidak ada lokasi yang cocok." />}
+          <Table head={["Foto", "Nama", "Kategori", "Alamat", "Koordinat", ""]}>
+            {filtered.length === 0 && <EmptyRow colSpan={6} text="Tidak ada lokasi yang cocok." />}
             {pager.pageItems.map((l) => (
               <tr key={l.id}>
+                <td className="px-4 py-2">
+                  <ImageThumb url={l.image_url} />
+                </td>
                 <td className="px-4 py-3 font-medium text-gray-900">{l.name}</td>
                 <td className="px-4 py-3">
                   <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{l.category?.name}</span>
@@ -259,6 +279,11 @@ export default function LocationsPage() {
               onPick={(lat, lng) => set({ latitude: String(lat), longitude: String(lng) })}
             />
           </div>
+          <ImageField
+            value={form.image_url}
+            onChange={(url) => set({ image_url: url })}
+            upload={locationDatasource.uploadImage}
+          />
           <Field label="Deskripsi">
             <TextArea value={form.description} onChange={(e) => set({ description: e.target.value })} />
           </Field>
