@@ -36,7 +36,8 @@ export default function LocationPicker({
     <div className="h-64 overflow-hidden rounded-lg border border-gray-200">
       <MapContainer center={hasPoint ? [lat, lng] : BALI_CENTER} zoom={hasPoint ? 14 : 9} className="h-full w-full">
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          referrerPolicy="strict-origin-when-cross-origin"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
         <ClickHandler onPick={onPick} />
