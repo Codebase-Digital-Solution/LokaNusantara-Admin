@@ -1,10 +1,23 @@
 export type Role = "user" | "admin";
+export type LanguageCode = "id" | "en" | "ja" | "ko";
+export const CONTENT_LANGUAGES: { code: LanguageCode; label: string }[] = [
+  { code: "id", label: "Indonesia" },
+  { code: "en", label: "English" },
+  { code: "ja", label: "日本語" },
+  { code: "ko", label: "한국어" },
+];
+export type Translations<T> = Record<LanguageCode, T>
+export interface LocationTranslation { name: string; description: string; history: string; address: string }
+export interface CategoryTranslation { label: string }
+export interface EventTranslation { name: string; description: string; category: string; region: string }
+export interface TrailTranslation { title: string; subtitle: string; story: string }
 
 export interface Category {
   id: number;
   name: string;
   /** Display order in the app, lowest first. */
   position: number;
+  translations?: { language_code: LanguageCode; label: string }[];
 }
 
 export interface Location {
@@ -21,6 +34,7 @@ export interface Location {
   category: Category;
   created_at: string;
   updated_at: string;
+  translations?: { language_code: LanguageCode; name: string; description: string; history: string; address: string }[];
 }
 
 export interface LocationInput {
@@ -32,6 +46,7 @@ export interface LocationInput {
   latitude: number;
   longitude: number;
   category_id: number;
+  translations: Translations<LocationTranslation>;
 }
 
 export interface User {
@@ -64,6 +79,7 @@ export interface CulturalEvent {
   region: string;
   location_id?: string;
   location?: { id: string; name: string };
+  translations?: { language_code: LanguageCode; name: string; description: string; category: string; region: string }[];
 }
 
 export interface EventInput {
@@ -75,6 +91,7 @@ export interface EventInput {
   is_estimate: boolean;
   region: string;
   location_id: string | null;
+  translations: Translations<EventTranslation>;
 }
 
 export interface TrailStop {
@@ -84,6 +101,7 @@ export interface TrailStop {
   location_id: string;
   location?: Location;
   note: string;
+  translations?: { language_code: LanguageCode; note: string }[];
 }
 
 export interface Trail {
@@ -96,6 +114,7 @@ export interface Trail {
   /** Cover photo: "/uploads/..." (relative to the API) or a full URL. */
   image_url: string;
   stops: TrailStop[];
+  translations?: { language_code: LanguageCode; title: string; subtitle: string; story: string }[];
 }
 
 export interface TrailInput {
@@ -105,7 +124,8 @@ export interface TrailInput {
   story: string;
   color: string;
   image_url: string;
-  stops: { location_id: string; note: string }[];
+  stops: { location_id: string; note: string; translations: Partial<Record<LanguageCode, string>> }[];
+  translations: Translations<TrailTranslation>;
 }
 
 export interface Stats {

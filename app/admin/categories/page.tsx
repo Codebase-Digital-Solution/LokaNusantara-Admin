@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Pencil, Plus } from "lucide-react";
 import { categoryDatasource } from "@/data/datasources";
-import type { Category } from "@/domain/entities";
+import { CONTENT_LANGUAGES, type Category, type LanguageCode } from "@/domain/entities";
+import { LanguageTabs } from "@/components/admin/LanguageTabs";
 import {
   Button,
   DeleteButton,
@@ -26,13 +27,18 @@ export default function CategoriesPage() {
   const qc = useQueryClient();
   const { data = [], isLoading, error } = useQuery({ queryKey: ["categories"], queryFn: categoryDatasource.getAll });
   const [editing, setEditing] = useState<Category | "new" | null>(null);
-  const [name, setName] = useState("");
+  const [language, setLanguage] = useState<LanguageCode>("id");
+  const [translations, setTranslations] = useState<Record<LanguageCode, string>>({ id: "", en: "", ja: "", ko: "" });
   const [actionError, setActionError] = useState<string | null>(null);
   const pager = usePagination(data);
 
   const save = useMutation({
-    mutationFn: () =>
-      editing === "new" ? categoryDatasource.create(name.trim()) : categoryDatasource.update((editing as Category).id, name.trim()),
+    mutationFn: () => {
+      const values = CONTENT_LANGUAGES.map(({ code }) => ({ language_code: code, label: translations[code] }));
+      return editing === "new"
+        ? categoryDatasource.create(translations.id.trim(), values)
+        : categoryDatasource.update((editing as Category).id, values);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["categories"] });
       setEditing(null);
@@ -41,7 +47,13 @@ export default function CategoriesPage() {
 
   const open = (c: Category | "new") => {
     save.reset();
-    setName(c === "new" ? "" : c.name);
+    setLanguage("id");
+    const values: Record<LanguageCode, string> = { id: "", en: "", ja: "", ko: "" };
+    if (c !== "new") {
+      for (const row of c.translations ?? []) values[row.language_code] = row.label;
+      if (!values.id) values.id = c.name;
+    }
+    setTranslations(values);
     setEditing(c);
   };
 
@@ -119,7 +131,7 @@ export default function CategoriesPage() {
                     </button>
                   </div>
                 </td>
-                <td className="px-4 py-3 font-medium text-gray-900">{c.name}</td>
+                <td className="px-4 py-3 font-medium text-gray-900">{c.translations?.find((t) => t.language_code === "id")?.label ?? c.name}</td>
                 <td className="px-4 py-3 text-right whitespace-nowrap">
                   <Button variant="ghost" className="!px-2 !py-1 text-xs" onClick={() => open(c)}>
                     <Pencil size={12} /> Ubah
@@ -143,8 +155,9 @@ export default function CategoriesPage() {
           }}
         >
           <ErrorBanner message={save.error ? errorMessage(save.error) : null} />
-          <Field label="Nama" hint="Contoh: pura, kuliner, tradisi">
-            <Input required autoFocus value={name} onChange={(e) => setName(e.target.value)} />
+          <LanguageTabs value={language} onChange={setLanguage} />
+          <Field label="Nama tampilan" hint="Contoh: Pura, Temples, 寺院">
+            <Input required={language === "id"} autoFocus={language === "id"} value={translations[language]} onChange={(e) => setTranslations((prev) => ({ ...prev, [language]: e.target.value }))} />
           </Field>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setEditing(null)}>

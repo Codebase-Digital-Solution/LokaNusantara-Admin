@@ -5,7 +5,8 @@ import dynamic from "next/dynamic";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Search } from "lucide-react";
 import { categoryDatasource, locationDatasource } from "@/data/datasources";
-import type { Location, LocationInput } from "@/domain/entities";
+import { CONTENT_LANGUAGES, type LanguageCode, type Location, type LocationInput, type LocationTranslation } from "@/domain/entities";
+import { LanguageTabs } from "@/components/admin/LanguageTabs";
 import { ImageField, ImageThumb } from "@/components/admin/ImageField";
 import {
   Button,
@@ -31,22 +32,20 @@ const LocationPicker = dynamic(() => import("@/components/admin/LocationPicker")
 });
 
 type FormState = {
-  name: string;
-  description: string;
-  history: string;
+  translations: Record<LanguageCode, LocationTranslation>;
   image_url: string;
-  address: string;
   latitude: string;
   longitude: string;
   category_id: string;
 };
 
+const emptyTranslations = (): Record<LanguageCode, LocationTranslation> => Object.fromEntries(
+  CONTENT_LANGUAGES.map(({ code }) => [code, { name: "", description: "", history: "", address: "" }]),
+) as Record<LanguageCode, LocationTranslation>;
+
 const EMPTY: FormState = {
-  name: "",
-  description: "",
-  history: "",
+  translations: emptyTranslations(),
   image_url: "",
-  address: "",
   latitude: "",
   longitude: "",
   category_id: "",
@@ -62,6 +61,7 @@ export default function LocationsPage() {
   const [onlyMissingPhoto, setOnlyMissingPhoto] = useState(false);
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
+  const [language, setLanguage] = useState<LanguageCode>("id");
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -78,18 +78,23 @@ export default function LocationsPage() {
   const missingPhotos = (locations.data ?? []).filter((l) => !l.image_url).length;
 
   const set = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
+  const setTranslation = (patch: Partial<LocationTranslation>) => setForm((f) => ({
+    ...f,
+    translations: { ...f.translations, [language]: { ...f.translations[language], ...patch } },
+  }));
 
   const save = useMutation({
     mutationFn: () => {
       const input: LocationInput = {
-        name: form.name.trim(),
-        description: form.description,
-        history: form.history,
+        name: form.translations.id.name.trim(),
+        description: form.translations.id.description,
+        history: form.translations.id.history,
         image_url: form.image_url,
-        address: form.address,
+        address: form.translations.id.address,
         latitude: Number(form.latitude),
         longitude: Number(form.longitude),
         category_id: Number(form.category_id),
+        translations: form.translations,
       };
       return editingId === "new" ? locationDatasource.create(input) : locationDatasource.update(editingId!, input);
     },
@@ -101,7 +106,8 @@ export default function LocationsPage() {
 
   const openNew = () => {
     save.reset();
-    setForm({ ...EMPTY, category_id: String(categories.data?.[0]?.id ?? "") });
+    setLanguage("id");
+    setForm({ ...EMPTY, translations: emptyTranslations(), category_id: String(categories.data?.[0]?.id ?? "") });
     setEditingId("new");
   };
 
@@ -112,12 +118,15 @@ export default function LocationsPage() {
     setLoadingDetail(true);
     try {
       const full = await locationDatasource.getById(l.id);
+      setLanguage("id");
       setForm({
-        name: full.name,
-        description: full.description ?? "",
-        history: full.history ?? "",
+        translations: (() => {
+          const values = emptyTranslations();
+          for (const row of full.translations ?? []) values[row.language_code as LanguageCode] = { name: row.name ?? "", description: row.description ?? "", history: row.history ?? "", address: row.address ?? "" };
+          if (!values.id.name) values.id = { name: full.name ?? "", description: full.description ?? "", history: full.history ?? "", address: full.address ?? "" };
+          return values;
+        })(),
         image_url: full.image_url ?? "",
-        address: full.address ?? "",
         latitude: String(full.latitude),
         longitude: String(full.longitude),
         category_id: String(full.category_id),
@@ -230,9 +239,10 @@ export default function LocationsPage() {
           }}
         >
           <ErrorBanner message={save.error ? errorMessage(save.error) : null} />
+          <LanguageTabs value={language} onChange={setLanguage} />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nama">
-              <Input required value={form.name} onChange={(e) => set({ name: e.target.value })} />
+              <Input required={language === "id"} value={form.translations[language].name} onChange={(e) => setTranslation({ name: e.target.value })} />
             </Field>
             <Field label="Kategori">
               <Select required value={form.category_id} onChange={(e) => set({ category_id: e.target.value })}>
@@ -245,7 +255,7 @@ export default function LocationsPage() {
             </Field>
           </div>
           <Field label="Alamat">
-            <Input value={form.address} onChange={(e) => set({ address: e.target.value })} />
+            <Input value={form.translations[language].address} onChange={(e) => setTranslation({ address: e.target.value })} />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Latitude">
@@ -285,10 +295,10 @@ export default function LocationsPage() {
             upload={locationDatasource.uploadImage}
           />
           <Field label="Deskripsi">
-            <TextArea value={form.description} onChange={(e) => set({ description: e.target.value })} />
+            <TextArea value={form.translations[language].description} onChange={(e) => setTranslation({ description: e.target.value })} />
           </Field>
           <Field label="Sejarah" hint="Teks ini dibacakan oleh pemandu audio di aplikasi.">
-            <TextArea rows={6} value={form.history} onChange={(e) => set({ history: e.target.value })} />
+            <TextArea rows={6} value={form.translations[language].history} onChange={(e) => setTranslation({ history: e.target.value })} />
           </Field>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setEditingId(null)}>

@@ -6,7 +6,8 @@ import { ArrowDown, ArrowUp, Pencil, Plus, X } from "lucide-react";
 import { locationDatasource, trailDatasource } from "@/data/datasources";
 import { ImageField } from "@/components/admin/ImageField";
 import { imageSrc } from "@/core/utils/imageUrl";
-import type { Trail, TrailInput } from "@/domain/entities";
+import { CONTENT_LANGUAGES, type LanguageCode, type Trail, type TrailInput, type TrailTranslation } from "@/domain/entities";
+import { LanguageTabs } from "@/components/admin/LanguageTabs";
 import {
   Button,
   DeleteButton,
@@ -23,7 +24,11 @@ import {
   usePagination,
 } from "@/components/admin/ui";
 
-const EMPTY: TrailInput = { slug: "", title: "", subtitle: "", story: "", color: "#A87618", image_url: "", stops: [] };
+const emptyTranslations = (): Record<LanguageCode, TrailTranslation> => Object.fromEntries(
+  CONTENT_LANGUAGES.map(({ code }) => [code, { title: "", subtitle: "", story: "" }]),
+) as Record<LanguageCode, TrailTranslation>;
+const emptyStopTranslations = (): Record<LanguageCode, string> => ({ id: "", en: "", ja: "", ko: "" });
+const EMPTY: TrailInput = { slug: "", title: "", subtitle: "", story: "", color: "#A87618", image_url: "", stops: [], translations: emptyTranslations() };
 
 function slugify(s: string) {
   return s
@@ -41,12 +46,14 @@ export default function TrailsPage() {
 
   const [editing, setEditing] = useState<Trail | "new" | null>(null);
   const [form, setForm] = useState<TrailInput>(EMPTY);
+  const [language, setLanguage] = useState<LanguageCode>("id");
   const [slugTouched, setSlugTouched] = useState(false);
   const [newStop, setNewStop] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
   const pager = usePagination(trails.data ?? []);
 
   const set = (patch: Partial<TrailInput>) => setForm((f) => ({ ...f, ...patch }));
+  const setTranslation = (patch: Partial<TrailTranslation>) => setForm((f) => ({ ...f, translations: { ...f.translations, [language]: { ...f.translations[language], ...patch } } }));
 
   const sortedLocations = useMemo(
     () => [...(locations.data ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
@@ -55,8 +62,11 @@ export default function TrailsPage() {
   const locationName = useMemo(() => new Map((locations.data ?? []).map((l) => [l.id, l.name])), [locations.data]);
 
   const save = useMutation({
-    mutationFn: () =>
-      editing === "new" ? trailDatasource.create(form) : trailDatasource.update((editing as Trail).id, form),
+    mutationFn: () => {
+      const input = { ...form, title: form.translations.id.title.trim(), subtitle: form.translations.id.subtitle, story: form.translations.id.story, translations: form.translations,
+        stops: form.stops.map((stop) => ({ ...stop, note: stop.translations.id ?? "" })) };
+      return editing === "new" ? trailDatasource.create(input) : trailDatasource.update((editing as Trail).id, input);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["trails"] });
       setEditing(null);
@@ -67,19 +77,22 @@ export default function TrailsPage() {
     save.reset();
     setNewStop("");
     setSlugTouched(t !== "new");
-    setForm(
-      t === "new"
-        ? EMPTY
-        : {
-            slug: t.slug,
-            title: t.title,
-            subtitle: t.subtitle ?? "",
-            story: t.story ?? "",
-            color: t.color || "#A87618",
-            image_url: t.image_url ?? "",
-            stops: t.stops.map((s) => ({ location_id: s.location_id, note: s.note ?? "" })),
-          },
-    );
+    setLanguage("id");
+    const translations = emptyTranslations();
+    if (t !== "new") {
+      for (const row of t.translations ?? []) translations[row.language_code] = { title: row.title ?? "", subtitle: row.subtitle ?? "", story: row.story ?? "" };
+      if (!translations.id.title) translations.id = { title: t.title, subtitle: t.subtitle ?? "", story: t.story ?? "" };
+    }
+    setForm(t === "new" ? { ...EMPTY, translations: emptyTranslations(), stops: [] } : {
+      slug: t.slug, title: translations.id.title, subtitle: translations.id.subtitle, story: translations.id.story,
+      color: t.color || "#A87618", image_url: t.image_url ?? "", translations,
+      stops: t.stops.map((stop) => {
+        const stopTranslations = emptyStopTranslations();
+        for (const row of stop.translations ?? []) stopTranslations[row.language_code] = row.note ?? "";
+        if (!stopTranslations.id) stopTranslations.id = stop.note ?? "";
+        return { location_id: stop.location_id, note: stopTranslations.id, translations: stopTranslations };
+      }),
+    });
     setEditing(t);
   };
 
@@ -93,7 +106,7 @@ export default function TrailsPage() {
     });
 
   const updateStop = (i: number, note: string) =>
-    setForm((f) => ({ ...f, stops: f.stops.map((s, k) => (k === i ? { ...s, note } : s)) }));
+    setForm((f) => ({ ...f, stops: f.stops.map((s, k) => (k === i ? { ...s, note: language === "id" ? note : s.note, translations: { ...s.translations, [language]: note } } : s)) }));
 
   const removeStop = (i: number) => setForm((f) => ({ ...f, stops: f.stops.filter((_, k) => k !== i) }));
 
@@ -173,14 +186,16 @@ export default function TrailsPage() {
           }}
         >
           <ErrorBanner message={save.error ? errorMessage(save.error) : null} />
+          <LanguageTabs value={language} onChange={setLanguage} />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Judul">
               <Input
-                required
-                value={form.title}
-                onChange={(e) =>
-                  set({ title: e.target.value, ...(slugTouched ? {} : { slug: slugify(e.target.value) }) })
-                }
+                required={language === "id"}
+                value={form.translations[language].title}
+                onChange={(e) => {
+                  setTranslation({ title: e.target.value });
+                  if (language === "id" && !slugTouched) set({ slug: slugify(e.target.value) });
+                }}
               />
             </Field>
             <Field label="Slug" hint="Huruf kecil, angka, dan tanda hubung.">
@@ -197,7 +212,7 @@ export default function TrailsPage() {
           </div>
           <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
             <Field label="Subjudul">
-              <Input value={form.subtitle} onChange={(e) => set({ subtitle: e.target.value })} />
+              <Input value={form.translations[language].subtitle} onChange={(e) => setTranslation({ subtitle: e.target.value })} />
             </Field>
             <Field label="Warna">
               <div className="flex items-center gap-2">
@@ -218,7 +233,7 @@ export default function TrailsPage() {
             upload={trailDatasource.uploadImage}
           />
           <Field label="Kisah">
-            <TextArea rows={5} value={form.story} onChange={(e) => set({ story: e.target.value })} />
+            <TextArea rows={5} value={form.translations[language].story} onChange={(e) => setTranslation({ story: e.target.value })} />
           </Field>
 
           <div>
@@ -243,7 +258,7 @@ export default function TrailsPage() {
                   </div>
                   <Input
                     placeholder="Catatan untuk perhentian ini"
-                    value={s.note}
+                    value={s.translations[language] ?? ""}
                     onChange={(e) => updateStop(i, e.target.value)}
                     className="mt-2"
                   />
@@ -264,7 +279,7 @@ export default function TrailsPage() {
                 variant="secondary"
                 disabled={!newStop}
                 onClick={() => {
-                  set({ stops: [...form.stops, { location_id: newStop, note: "" }] });
+                  set({ stops: [...form.stops, { location_id: newStop, note: "", translations: emptyStopTranslations() }] });
                   setNewStop("");
                 }}
               >

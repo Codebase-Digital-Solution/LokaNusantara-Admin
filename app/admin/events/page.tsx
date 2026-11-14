@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Search } from "lucide-react";
 import { categoryDatasource, eventDatasource, locationDatasource } from "@/data/datasources";
-import type { CulturalEvent, EventInput } from "@/domain/entities";
+import { CONTENT_LANGUAGES, type CulturalEvent, type EventInput, type EventTranslation, type LanguageCode } from "@/domain/entities";
+import { LanguageTabs } from "@/components/admin/LanguageTabs";
 import {
   Button,
   DeleteButton,
@@ -23,15 +24,13 @@ import {
   usePagination,
 } from "@/components/admin/ui";
 
+const emptyTranslations = (): Record<LanguageCode, EventTranslation> => Object.fromEntries(
+  CONTENT_LANGUAGES.map(({ code }) => [code, { name: "", description: "", category: "", region: "" }]),
+) as Record<LanguageCode, EventTranslation>;
+
 const EMPTY: EventInput = {
-  name: "",
-  description: "",
-  category: "",
-  start_date: "",
-  end_date: null,
-  is_estimate: false,
-  region: "",
-  location_id: null,
+  name: "", description: "", category: "", start_date: "", end_date: null,
+  is_estimate: false, region: "", location_id: null, translations: emptyTranslations(),
 };
 
 function formatDate(d: string) {
@@ -48,9 +47,13 @@ export default function EventsPage() {
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<CulturalEvent | "new" | null>(null);
   const [form, setForm] = useState<EventInput>(EMPTY);
+  const [language, setLanguage] = useState<LanguageCode>("id");
   const [actionError, setActionError] = useState<string | null>(null);
 
   const set = (patch: Partial<EventInput>) => setForm((f) => ({ ...f, ...patch }));
+  const setTranslation = (patch: Partial<EventTranslation>) => setForm((f) => ({
+    ...f, translations: { ...f.translations, [language]: { ...f.translations[language], ...patch } },
+  }));
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -69,7 +72,11 @@ export default function EventsPage() {
     mutationFn: () => {
       const input: EventInput = {
         ...form,
-        name: form.name.trim(),
+        name: form.translations.id.name.trim(),
+        description: form.translations.id.description,
+        category: form.translations.id.category,
+        region: form.translations.id.region,
+        translations: form.translations,
         end_date: form.end_date || null,
         location_id: form.location_id || null,
       };
@@ -83,20 +90,17 @@ export default function EventsPage() {
 
   const open = (e: CulturalEvent | "new") => {
     save.reset();
-    setForm(
-      e === "new"
-        ? EMPTY
-        : {
-            name: e.name,
-            description: e.description ?? "",
-            category: e.category ?? "",
-            start_date: e.start_date,
-            end_date: e.end_date ?? null,
-            is_estimate: e.is_estimate,
-            region: e.region ?? "",
-            location_id: e.location_id ?? null,
-          },
-    );
+    setLanguage("id");
+    const translations = emptyTranslations();
+    if (e !== "new") {
+      for (const row of e.translations ?? []) translations[row.language_code] = { name: row.name ?? "", description: row.description ?? "", category: row.category ?? "", region: row.region ?? "" };
+      if (!translations.id.name) translations.id = { name: e.name, description: e.description ?? "", category: e.category ?? "", region: e.region ?? "" };
+    }
+    setForm(e === "new" ? { ...EMPTY, translations: emptyTranslations() } : {
+      name: translations.id.name, description: translations.id.description, category: translations.id.category,
+      start_date: e.start_date, end_date: e.end_date ?? null, is_estimate: e.is_estimate,
+      region: translations.id.region, location_id: e.location_id ?? null, translations,
+    });
     setEditing(e);
   };
 
@@ -170,8 +174,9 @@ export default function EventsPage() {
           }}
         >
           <ErrorBanner message={save.error ? errorMessage(save.error) : null} />
+          <LanguageTabs value={language} onChange={setLanguage} />
           <Field label="Nama">
-            <Input required value={form.name} onChange={(e) => set({ name: e.target.value })} />
+            <Input required={language === "id"} value={form.translations[language].name} onChange={(e) => setTranslation({ name: e.target.value })} />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Tanggal mulai">
@@ -197,17 +202,16 @@ export default function EventsPage() {
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Kategori">
-              <Select value={form.category} onChange={(e) => set({ category: e.target.value })}>
+              <Select value={form.translations[language].category} onChange={(e) => setTranslation({ category: e.target.value })}>
                 <option value="">Tanpa kategori</option>
-                {categories.data?.map((c) => (
-                  <option key={c.id} value={c.name}>
-                    {c.name}
-                  </option>
-                ))}
+                {categories.data?.map((c) => {
+                  const label = c.translations?.find((t) => t.language_code === language)?.label ?? c.name;
+                  return <option key={c.id} value={label}>{label}</option>;
+                })}
               </Select>
             </Field>
             <Field label="Wilayah" hint="Contoh: Seluruh Bali, Gianyar">
-              <Input value={form.region} onChange={(e) => set({ region: e.target.value })} />
+              <Input value={form.translations[language].region} onChange={(e) => setTranslation({ region: e.target.value })} />
             </Field>
           </div>
           <Field label="Lokasi terkait" hint="Opsional. Menghubungkan agenda ke tempat di peta.">
@@ -221,7 +225,7 @@ export default function EventsPage() {
             </Select>
           </Field>
           <Field label="Deskripsi">
-            <TextArea value={form.description} onChange={(e) => set({ description: e.target.value })} />
+            <TextArea value={form.translations[language].description} onChange={(e) => setTranslation({ description: e.target.value })} />
           </Field>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setEditing(null)}>

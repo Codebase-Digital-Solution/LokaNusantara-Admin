@@ -55,8 +55,8 @@ export const aiSettingsDatasource = {
 
 export const locationDatasource = {
   getAll: async (): Promise<Location[]> =>
-    (await apiClient.get<ListResponse<Location>>("/locations", { params: { limit: ALL } })).data.data,
-  getById: async (id: string): Promise<Location> => (await apiClient.get<Location>(`/locations/${id}`)).data,
+    (await apiClient.get<ListResponse<Location>>("/locations", { params: { limit: ALL, include_translations: true } })).data.data,
+  getById: async (id: string): Promise<Location> => (await apiClient.get<Location>(`/locations/${id}`, { params: { include_translations: true } })).data,
   create: async (input: LocationInput): Promise<Location> =>
     (await apiClient.post<Location>("/locations", input)).data,
   update: async (id: string, input: LocationInput): Promise<Location> =>
@@ -70,11 +70,11 @@ export const locationDatasource = {
 
 export const categoryDatasource = {
   getAll: async (): Promise<Category[]> =>
-    (await apiClient.get<ListResponse<Category>>("/categories", { params: { limit: ALL } })).data.data,
-  create: async (name: string): Promise<Category> =>
-    (await apiClient.post<Category>("/categories", { name })).data,
-  update: async (id: number, name: string): Promise<Category> =>
-    (await apiClient.put<Category>(`/categories/${id}`, { name })).data,
+    (await apiClient.get<ListResponse<Category>>("/categories", { params: { limit: ALL, include_translations: true } })).data.data,
+  create: async (name: string, translations: Category["translations"]): Promise<Category> =>
+    (await apiClient.post<Category>("/categories", { name, translations: Object.fromEntries((translations ?? []).map((t) => [t.language_code, t])) })).data,
+  update: async (id: number, translations: Category["translations"]): Promise<Category> =>
+    (await apiClient.put<Category>(`/categories/${id}`, { translations: Object.fromEntries((translations ?? []).map((t) => [t.language_code, t])) })).data,
   remove: async (id: number): Promise<void> => {
     await apiClient.delete(`/categories/${id}`);
   },
@@ -86,7 +86,7 @@ export const categoryDatasource = {
 
 export const eventDatasource = {
   getAll: async (): Promise<CulturalEvent[]> =>
-    (await apiClient.get<ListResponse<CulturalEvent>>("/admin/events")).data.data,
+    (await apiClient.get<ListResponse<CulturalEvent>>("/admin/events", { params: { include_translations: true } })).data.data,
   create: async (input: EventInput): Promise<CulturalEvent> =>
     (await apiClient.post<CulturalEvent>("/events", input)).data,
   update: async (id: number, input: EventInput): Promise<CulturalEvent> =>
@@ -99,7 +99,7 @@ export const eventDatasource = {
 export const trailDatasource = {
   /** Uploads a cover photo and returns its stored path ("/uploads/..."). */
   uploadImage: (file: File): Promise<string> => uploadImage("/admin/uploads/trail-image", file),
-  getAll: async (): Promise<Trail[]> => (await apiClient.get<ListResponse<Trail>>("/trails")).data.data,
+  getAll: async (): Promise<Trail[]> => (await apiClient.get<ListResponse<Trail>>("/trails", { params: { include_translations: true } })).data.data,
   create: async (input: TrailInput): Promise<Trail> => (await apiClient.post<Trail>("/trails", input)).data,
   update: async (id: number, input: TrailInput): Promise<Trail> =>
     (await apiClient.put<Trail>(`/trails/${id}`, input)).data,
